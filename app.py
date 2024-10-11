@@ -1,7 +1,13 @@
+from pprint import pprint as pp
+
+
 class Flight:
     def __init__(self, flight_number, airplane):
         self.flight_number = flight_number
         self.airplane = airplane
+
+        rows, seats = self.airplane.get_seating_plan()
+        self.seating_plan = [None] + [{letter: None for letter in seats} for _ in rows]
 
     def get_airline(self):
         return self.flight_number[:2]
@@ -11,6 +17,33 @@ class Flight:
 
     def get_model(self):
         return self.airplane.get_airplane_model()
+
+    def _parse_seat(self, seat):
+        rows, seats = self.airplane.get_seating_plan()
+        letter = seat[-1]
+
+        if letter not in seats:
+            raise ValueError(f"Invalid seat letter: {letter}")
+
+        row_text = seat[:-1]
+
+        try:
+            row = int(row_text)
+        except ValueError:
+            raise ValueError(f"Invalid row number: {row_text}")
+
+        if row not in rows:
+            raise ValueError(f"Row number is out of range: {row}")
+
+        return row, letter
+
+    def allocate_passenger(self, passenger, seat):
+        row, letter = self._parse_seat(seat)
+
+        if self.seating_plan[row][letter] is not None:
+            raise ValueError(f"Seat is already taken: {seat}")
+
+        self.seating_plan[row][letter] = passenger
 
 
 class Airplane:
@@ -45,3 +78,6 @@ f = Flight('LO127', airbus)
 print(f.get_airline())
 print(f.get_flight_number())
 print(f.get_model())
+
+f.allocate_passenger(passenger="Lech K", seat="29C")
+pp(f.seating_plan)
