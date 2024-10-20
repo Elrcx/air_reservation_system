@@ -1,10 +1,7 @@
-from pprint import pprint as pp
-
-
 class Flight:
     def __init__(self, flight_number, airplane):
-        self.flight_number = flight_number
         self.airplane = airplane
+        self.flight_number = flight_number
 
         rows, seats = self.airplane.get_seating_plan()
         self.seating_plan = [None] + [{letter: None for letter in seats} for _ in rows]
@@ -12,7 +9,7 @@ class Flight:
     def get_airline(self):
         return self.flight_number[:2]
 
-    def get_flight_number(self):
+    def get_number(self):
         return self.flight_number[2:]
 
     def get_model(self):
@@ -20,6 +17,7 @@ class Flight:
 
     def _parse_seat(self, seat):
         rows, seats = self.airplane.get_seating_plan()
+
         letter = seat[-1]
 
         if letter not in seats:
@@ -49,15 +47,33 @@ class Flight:
         row_from, letter_from = self._parse_seat(seat_from)
 
         if self.seating_plan[row_from][letter_from] is None:
-            raise ValueError(f"Seat from is not occupied: {seat_from}")
+            raise ValueError(f"Seat from is not occupied: {seat_from}.")
 
         row_to, letter_to = self._parse_seat(seat_to)
 
         if self.seating_plan[row_to][letter_to] is not None:
-            raise ValueError(f"Seat to is occupied: {seat_to}")
+            raise ValueError(f"Seat to is occupied: {seat_to}.")
 
         self.seating_plan[row_to][letter_to] = self.seating_plan[row_from][letter_from]
         self.seating_plan[row_from][letter_from] = None
+
+    def get_empty_seat(self):
+        return sum(sum(1 for seat in row.values()
+                       if seat is None)
+                   for row in self.seating_plan if row is not None)
+
+    def get_passenger_list(self):
+        rows, seats = self.airplane.get_seating_plan()
+
+        for row in rows:
+            for letter in seats:
+                passenger = self.seating_plan[row][letter]
+                if passenger is not None:
+                    yield passenger, f'{row}{letter}'
+
+    def print_tickets(self, printer):
+        for passenger, seat in self.get_passenger_list():
+            printer(passenger, seat, self.get_model(), self.flight_number)
 
 
 class Airplane:
@@ -86,12 +102,21 @@ class Boeing737Max(Airplane):
         return range(1, 46), 'ABCDEGHJK'
 
 
+def card_printer(passenger, seat, airplane, flight_number):
+    message = f"| Passenger: \033[91m{passenger.title()}\033[0m, seat: {seat}, airplane: {airplane}, {flight_number} |"
+    frame = f"+{'-' * (len(message) - 2)}+"
+    empty_frame = f"|{' ' * (len(message) - 2)}|"
+
+    banner = [frame, empty_frame, message, empty_frame, frame]
+    print("\n".join(banner))
+
+
+plane = Airplane()
 airbus = AirbusA380()
 boeing = Boeing737Max()
-f = Flight('LO127', airbus)
-print(f.get_airline())
-print(f.get_flight_number())
-print(f.get_model())
-
-f.allocate_passenger(passenger="Lech K", seat="29C")
-pp(f.seating_plan)
+f = Flight('LO127', boeing)
+f.allocate_passenger(passenger="Edward E", seat="12C")
+f.allocate_passenger(passenger="Alfons E", seat="12B")
+f.allocate_passenger(passenger="Jacek A", seat="12A")
+f.relocate_passenger("12A", "18G")
+f.print_tickets(card_printer)
